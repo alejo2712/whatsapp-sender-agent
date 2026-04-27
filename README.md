@@ -8,30 +8,60 @@ A CLI agent for sending WhatsApp messages via the Meta WhatsApp Cloud API. Desig
 - Sends template messages (required to start or re-engage conversations)
 - Validates phone format before any API call
 - Returns structured output: `success`, `messageId`, or error details
+- Runs fully in **mock mode** with no credentials required
 
-## Installation
+## Running without Meta credentials (Mock Mode)
+
+Mock mode is the **default**. No Meta account, token, or phone number ID is needed.
 
 ```bash
 git clone https://github.com/alejo2712/whatsapp-sender-agent.git
 cd whatsapp-sender-agent
 pnpm install
-```
-
-## Environment Setup
-
-```bash
 cp .env.example .env
+# .env already has WHATSAPP_MODE=mock — nothing else needed
+
+pnpm send --to 5491112345678 --message "Hello from mock mode"
 ```
 
-Edit `.env`:
+Output:
+```
+INFO  whatsapp-sender-agent starting {"mode":"mock"}
+INFO  WhatsApp client: MOCK mode — no network requests will be made
+INFO  Agent: sendText invoked {"to":"5491112345678"}
+INFO  [MOCK] Simulating Meta API call — no network request made
+INFO  [MOCK] Fake response generated {"messageId":"mock-wamid-..."}
+OK    Message accepted {"messageId":"mock-wamid-..."}
+
+--- Result ---
+success:   true
+messageId: mock-wamid-1234567890-abc123
+```
+
+No network calls are made. The mock client simulates a realistic delay and returns a unique fake `messageId`.
+
+## Switching to Live Mode
+
+When you have Meta credentials:
 
 ```env
-META_ACCESS_TOKEN=your_token_here
+# .env
+WHATSAPP_MODE=live
+META_ACCESS_TOKEN=your_permanent_token
 META_PHONE_NUMBER_ID=your_phone_number_id
 META_GRAPH_API_VERSION=v21.0
 ```
 
-See [`docs/meta-whatsapp-setup.md`](docs/meta-whatsapp-setup.md) for how to get these values.
+Then run the same commands — the live `WhatsAppCloudApiClient` takes over automatically.
+
+See [`docs/meta-whatsapp-setup.md`](docs/meta-whatsapp-setup.md) for how to obtain credentials.
+
+## Installation
+
+```bash
+pnpm install
+cp .env.example .env
+```
 
 ## Send a Text Message
 
@@ -40,6 +70,7 @@ pnpm send --to 5491112345678 --message "Hello from my agent"
 ```
 
 Phone number format: digits only, no "+", international format (country code included).
+Example — Argentina mobile: `54` + `911` + `12345678` = `5491112345678`
 
 ## Send a Template Message
 
@@ -53,27 +84,46 @@ pnpm send:template --to 5491112345678 --template hello_world --lang es_AR
 pnpm test
 ```
 
+22 tests — all pass in mock mode without any credentials.
+
 ## Architecture
 
-See [`docs/architecture.md`](docs/architecture.md) for the layer diagram and integration points.
+```
+CLI
+ └── WhatsAppSenderAgent
+         ├── validatePhone skill
+         ├── buildPayload skill
+         └── sendWhatsAppMessage skill
+                 └── IWhatsAppClient
+                         ├── MockWhatsAppClient    (WHATSAPP_MODE=mock)
+                         └── WhatsAppCloudApiClient (WHATSAPP_MODE=live)
+                                     └── Meta Graph API
+```
 
-```
-CLI → WhatsAppSenderAgent → [validate, build, send] skills → WhatsAppCloudApiClient → Meta API
-```
+See [`docs/architecture.md`](docs/architecture.md) for the full layer diagram and orchestrator integration points.
 
 ## Current Limitations
 
-- Text messages only work within the 24-hour conversation window after the customer's last message
+- Live mode blocked until Meta credentials are obtained
+- Text messages only work within the 24-hour conversation window
 - Templates must be pre-approved by Meta before use
-- No built-in retry logic (add BullMQ in the orchestrator layer if needed)
+- No built-in retry logic (planned: BullMQ in Phase 9)
 - Single phone number per `.env` configuration
-- No support for media messages (images, documents) yet
+- No media message support yet (planned: Phase 5)
 
-## Next Steps
+## Roadmap
 
-- [ ] Wrap the agent in a NestJS REST endpoint for HTTP invocation
-- [ ] Add BullMQ job queue for reliable delivery with retries
-- [ ] Support media message payloads (image, document, video)
-- [ ] Add template parameter injection (body variables)
-- [ ] Integrate with orchestrator agent that decides recipient and content
-- [ ] Add n8n webhook trigger adapter
+See [`ROADMAP.md`](ROADMAP.md) for all 10 planned phases.
+
+| Phase | Status |
+|---|---|
+| 1 — Project setup + architecture | ✅ Done |
+| 2 — CLI + validation + mock mode | ✅ Done |
+| 3 — Logging and persistence | 🔲 Next |
+| 4 — Real Meta API integration | 🔲 Blocked (awaiting credentials) |
+| 5 — Template parameter injection | 🔲 Todo |
+| 6 — Webhook receiver | 🔲 Todo |
+| 7 — REST API adapter | 🔲 Todo |
+| 8 — Orchestrator agent | 🔲 Todo |
+| 9 — BullMQ queue | 🔲 Todo |
+| 10 — Frontend dashboard | 🔲 Future |

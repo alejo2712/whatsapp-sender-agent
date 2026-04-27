@@ -1,9 +1,10 @@
-import { WhatsAppApiClientError, WhatsAppCloudApiClient } from '../tools/whatsapp-cloud-api.client.js';
+import { WhatsAppApiClientError } from '../tools/whatsapp-cloud-api.client.js';
+import { IWhatsAppClient } from '../tools/whatsapp-client.interface.js';
 import { SendResult, WhatsAppPayload } from '../types/whatsapp.types.js';
 import { logger } from '../utils/logger.js';
 
 export async function sendWhatsAppMessage(
-  client: WhatsAppCloudApiClient,
+  client: IWhatsAppClient,
   payload: WhatsAppPayload,
 ): Promise<SendResult> {
   logger.info('Sending WhatsApp message', { to: payload.to, type: payload.type });
@@ -12,7 +13,7 @@ export async function sendWhatsAppMessage(
     const response = await client.sendMessage(payload);
     const messageId = response.messages?.[0]?.id;
 
-    logger.success('Message accepted by Meta API', { messageId, to: payload.to });
+    logger.success('Message accepted', { messageId, to: payload.to });
 
     return { success: true, messageId };
   } catch (err) {

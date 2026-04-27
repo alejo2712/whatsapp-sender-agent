@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import 'dotenv/config';
+import { getEnv } from './config/env.js';
 import { WhatsAppSenderAgent } from './agents/whatsapp-sender.agent.js';
 import { logger } from './utils/logger.js';
+import { SendResult } from './types/whatsapp.types.js';
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -11,14 +13,13 @@ function getArg(flag: string): string | undefined {
   return idx !== -1 ? args[idx + 1] : undefined;
 }
 
-function printResult(result: { success: boolean; messageId?: string; error?: { code: number; message: string; type: string } }) {
+function printResult(result: SendResult) {
+  console.log('\n--- Result ---');
   if (result.success) {
-    console.log('\n--- Result ---');
-    console.log('success:', true);
+    console.log('success:  ', true);
     console.log('messageId:', result.messageId ?? '(none)');
   } else {
-    console.log('\n--- Result ---');
-    console.log('success:', false);
+    console.log('success:  ', false);
     console.log('error.code:', result.error?.code);
     console.log('error.type:', result.error?.type);
     console.log('error.message:', result.error?.message);
@@ -27,6 +28,9 @@ function printResult(result: { success: boolean; messageId?: string; error?: { c
 }
 
 async function main() {
+  const { WHATSAPP_MODE } = getEnv();
+  logger.info(`whatsapp-sender-agent starting`, { mode: WHATSAPP_MODE });
+
   const agent = new WhatsAppSenderAgent();
 
   if (command === 'send') {
@@ -58,7 +62,7 @@ async function main() {
     return;
   }
 
-  logger.error(`Unknown command: "${command ?? '(none)'}". Use "send" or "send:template".`);
+  logger.error(`Unknown command: "${command ?? '(none)'}". Available: send, send:template`);
   process.exit(1);
 }
 

@@ -1,20 +1,35 @@
-import { WhatsAppCloudApiClient } from '../tools/whatsapp-cloud-api.client.js';
 import { buildTemplatePayload, buildTextPayload } from '../skills/build-whatsapp-payload.skill.js';
 import { sendWhatsAppMessage } from '../skills/send-whatsapp-message.skill.js';
 import { validatePhone } from '../skills/validate-phone.skill.js';
+import { IWhatsAppClient } from '../tools/whatsapp-client.interface.js';
+import { createWhatsAppClient } from '../tools/whatsapp-client.factory.js';
 import { SendResult, SendTemplateInput, SendTextInput, TemplateComponent } from '../types/whatsapp.types.js';
 import { logger } from '../utils/logger.js';
 
 /**
  * Orchestrates a single WhatsApp send operation.
- * Does NOT decide who to message, does NOT generate content, does NOT run campaigns.
- * Receives explicit inputs and executes the operation.
+ *
+ * Responsibilities:
+ *   - Validate input
+ *   - Build the correct payload
+ *   - Delegate to the appropriate client (mock | live) via IWhatsAppClient
+ *
+ * This agent does NOT:
+ *   - Decide who to message
+ *   - Generate marketing content
+ *   - Run bulk campaigns
+ *   - Read from any database or external state
+ *
+ * Future integration: an orchestrator_agent passes SendTextInput or SendTemplateInput
+ * and receives SendResult. The transport (mock/live/queue) is invisible to the caller.
+ *
+ * TODO: Extend with sendMedia(), sendReaction(), sendInteractive() as new skills are added.
  */
 export class WhatsAppSenderAgent {
-  private client: WhatsAppCloudApiClient;
+  private client: IWhatsAppClient;
 
-  constructor(client?: WhatsAppCloudApiClient) {
-    this.client = client ?? new WhatsAppCloudApiClient();
+  constructor(client?: IWhatsAppClient) {
+    this.client = client ?? createWhatsAppClient();
   }
 
   async sendText(input: SendTextInput): Promise<SendResult> {

@@ -1,21 +1,30 @@
 import axios, { AxiosInstance, isAxiosError } from 'axios';
-import { getEnv } from '../config/env.js';
+import { getLiveCredentials } from '../config/env.js';
 import { WhatsAppApiError, WhatsAppApiResponse, WhatsAppPayload } from '../types/whatsapp.types.js';
+import { IWhatsAppClient } from './whatsapp-client.interface.js';
 
-export class WhatsAppCloudApiClient {
+/**
+ * Live Meta WhatsApp Cloud API client.
+ * Only instantiated when WHATSAPP_MODE=live.
+ * Throws at construction if Meta credentials are missing.
+ *
+ * TODO: REAL API CALL — this is the integration point with Meta Graph API.
+ * Blocked until META_ACCESS_TOKEN and META_PHONE_NUMBER_ID are available.
+ * See docs/meta-whatsapp-setup.md for credential setup instructions.
+ */
+export class WhatsAppCloudApiClient implements IWhatsAppClient {
   private http: AxiosInstance;
   private phoneNumberId: string;
-  private apiVersion: string;
 
   constructor() {
-    const env = getEnv();
-    this.phoneNumberId = env.META_PHONE_NUMBER_ID;
-    this.apiVersion = env.META_GRAPH_API_VERSION;
+    // TODO: REAL API CALL — getLiveCredentials() will throw if credentials are not set
+    const creds = getLiveCredentials();
+    this.phoneNumberId = creds.META_PHONE_NUMBER_ID;
 
     this.http = axios.create({
-      baseURL: `https://graph.facebook.com/${this.apiVersion}`,
+      baseURL: `https://graph.facebook.com/${creds.META_GRAPH_API_VERSION}`,
       headers: {
-        Authorization: `Bearer ${env.META_ACCESS_TOKEN}`,
+        Authorization: `Bearer ${creds.META_ACCESS_TOKEN}`,
         'Content-Type': 'application/json',
       },
       timeout: 10_000,
@@ -23,6 +32,7 @@ export class WhatsAppCloudApiClient {
   }
 
   async sendMessage(payload: WhatsAppPayload): Promise<WhatsAppApiResponse> {
+    // TODO: REAL API CALL — POST to /{phoneNumberId}/messages
     try {
       const { data } = await this.http.post<WhatsAppApiResponse>(
         `/${this.phoneNumberId}/messages`,
